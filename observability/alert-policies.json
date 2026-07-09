@@ -1,0 +1,177 @@
+[
+  {
+    "displayName": "Composer DAG Failure Rate > 5% — PAGE ON-CALL",
+    "documentation": {
+      "content": "## DAG Failure Rate Alert\n\nMore than 5% of DAG runs have failed in the last 5 minutes.\n\n### Immediate Actions\n1. Check Cloud Monitor runbook: docs/runbooks/composer-dag-failure.md\n2. Identify the failing DAG in the Airflow UI\n3. Check Composer worker logs in Cloud Logging\n4. If it's a data dependency issue, contact the source system owner\n\n### Escalation\n- If unresolved after 15 minutes, page Platform Engineering Lead\n- If data pipeline is blocked, notify #data-pipeline Slack channel",
+      "mimeType": "text/markdown"
+    },
+    "conditions": [
+      {
+        "displayName": "DAG failure rate > 5%",
+        "conditionThreshold": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_RATE",
+              "crossSeriesReducer": "REDUCE_SUM"
+            }
+          ],
+          "comparison": "COMPARISON_GT",
+          "duration": "300s",
+          "filter": "metric.type=\"composer.googleapis.com/dag/run_count\" AND metric.labels.status=\"failed\"",
+          "thresholdValue": 5,
+          "trigger": {
+            "count": 1
+          }
+        }
+      }
+    ],
+    "alertStrategy": {
+      "autoClose": "1800s"
+    },
+    "combiner": "OR",
+    "enabled": true,
+    "notificationChannels": [],
+    "severity": "SEVERITY_CRITICAL"
+  },
+  {
+    "displayName": "BigQuery Slot Usage > 80% — WARNING",
+    "documentation": {
+      "content": "## BigQuery Slot Alert\n\nBigQuery slot utilization has exceeded 80% for over 1 hour.\n\n### Implications\n- Query performance will degrade\n- Concurrent queries may be queued\n- Model training pipelines may slow down\n\n### Actions\n1. Check which projects/datasets are consuming the most slots\n2. Identify long-running queries in INFORMATION_SCHEMA.JOBS\n3. Consider increasing slot commitment (flex slots for immediate relief)\n4. Optimize expensive queries (partition pruning, clustering, materialized views)\n\n### Runbook\nSee docs/runbooks/bigquery-dataset-restore.md for slot management.",
+      "mimeType": "text/markdown"
+    },
+    "conditions": [
+      {
+        "displayName": "Slot utilization > 80%",
+        "conditionThreshold": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_MEAN",
+              "crossSeriesReducer": "REDUCE_MEAN"
+            }
+          ],
+          "comparison": "COMPARISON_GT",
+          "duration": "3600s",
+          "filter": "metric.type=\"bigquery.googleapis.com/slot/total_usage\" AND resource.labels.project_id=\"${project_id}\"",
+          "thresholdValue": 80,
+          "trigger": {
+            "count": 1
+          }
+        }
+      }
+    ],
+    "alertStrategy": {
+      "autoClose": "3600s"
+    },
+    "combiner": "OR",
+    "enabled": true,
+    "notificationChannels": [],
+    "severity": "SEVERITY_WARNING"
+  },
+  {
+    "displayName": "DLP Scan Job Failed — INVESTIGATE",
+    "documentation": {
+      "content": "## DLP Scan Failure Alert\n\nA DLP inspection job has failed. This may indicate:\n- Permission issue (service account access revoked)\n- Bucket misconfiguration\n- DLP service disruption\n\n### Actions\n1. Check DLP job status: gcloud dlp jobs list\n2. Check the inspection template exists\n3. Verify the GCS bucket is accessible\n4. Re-run the DLP job if permissions are fixed\n\n### Impact\nPII may be flowing into BigQuery undetected. Manually inspect recent data loads.",
+      "mimeType": "text/markdown"
+    },
+    "conditions": [
+      {
+        "displayName": "DLP job status = FAILED",
+        "conditionThreshold": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "60s",
+              "perSeriesAligner": "ALIGN_COUNT",
+              "crossSeriesReducer": "REDUCE_SUM"
+            }
+          ],
+          "comparison": "COMPARISON_GT",
+          "duration": "0s",
+          "filter": "metric.type=\"dlp.googleapis.com/job/status\" AND metric.labels.status=\"FAILED\"",
+          "thresholdValue": 0,
+          "trigger": {
+            "count": 1
+          }
+        }
+      }
+    ],
+    "alertStrategy": {
+      "autoClose": "3600s"
+    },
+    "combiner": "OR",
+    "enabled": true,
+    "notificationChannels": [],
+    "severity": "SEVERITY_CRITICAL"
+  },
+  {
+    "displayName": "Data Lake Bucket Growth Anomaly — INVESTIGATE",
+    "documentation": {
+      "content": "## Data Lake Growth Anomaly Alert\n\nA data lake bucket has grown more than 50GB in the last hour, which exceeds the normal growth rate.\n\nThis could indicate:\n- Data pipeline backpressure (data accumulating in raw zone)\n- Accidental large file upload\n- Data exfiltration (attacker copying data out)\n- Misconfigured export job\n\n### Actions\n1. Identify the anomalous bucket from the alert labels\n2. List recent uploads: gsutil ls -l gs://{bucket}/** | sort -k2\n3. Check audit logs for the source of the upload\n4. If unauthorized, revoke access and investigate\n\n### Runbook\nSee docs/runbooks/data-pipeline-dr.md for data loss prevention.",
+      "mimeType": "text/markdown"
+    },
+    "conditions": [
+      {
+        "displayName": "Bucket growth > 50GB in 1 hour",
+        "conditionThreshold": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "3600s",
+              "perSeriesAligner": "ALIGN_DELTA",
+              "crossSeriesReducer": "REDUCE_PERCENTILE_95"
+            }
+          ],
+          "comparison": "COMPARISON_GT",
+          "duration": "3600s",
+          "filter": "metric.type=\"storage.googleapis.com/storage/total_bytes\" AND resource.labels.bucket_name=starts_with(\"secondwave-\")",
+          "thresholdValue": 50000000000,
+          "trigger": {
+            "count": 1
+          }
+        }
+      }
+    ],
+    "alertStrategy": {
+      "autoClose": "3600s"
+    },
+    "combiner": "OR",
+    "enabled": true,
+    "notificationChannels": [],
+    "severity": "SEVERITY_WARNING"
+  },
+  {
+    "displayName": "Vector Search Index Build Failed — WARNING",
+    "documentation": {
+      "content": "## Vector Search Index Build Failure\n\nThe Vector Search index build/update job has failed. This may impact fraud detection query accuracy.\n\n### Actions\n1. Check the index build job status in Vertex AI console\n2. Verify the embeddings bucket is accessible\n3. Re-trigger the index build from the pipeline DAG\n4. Monitor query recall metrics after rebuild",
+      "mimeType": "text/markdown"
+    },
+    "conditions": [
+      {
+        "displayName": "Index build job failed",
+        "conditionThreshold": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_COUNT",
+              "crossSeriesReducer": "REDUCE_SUM"
+            }
+          ],
+          "comparison": "COMPARISON_GT",
+          "duration": "0s",
+          "filter": "metric.type=\"aiplatform.googleapis.com/index/state\" AND metric.labels.state=\"FAILED\"",
+          "thresholdValue": 0,
+          "trigger": {
+            "count": 1
+          }
+        }
+      }
+    ],
+    "alertStrategy": {
+      "autoClose": "7200s"
+    },
+    "combiner": "OR",
+    "enabled": true,
+    "notificationChannels": [],
+    "severity": "SEVERITY_WARNING"
+  }
+]

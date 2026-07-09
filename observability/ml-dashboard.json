@@ -1,0 +1,299 @@
+{
+  "displayName": "SecondWave ML/AI Platform — Operational Overview",
+  "dashboardFilters": [],
+  "mosaicLayout": {
+    "columns": 12,
+    "tiles": [
+      {
+        "height": 4,
+        "width": 6,
+        "widget": {
+          "title": "Airflow DAG Success/Failure Rate",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"composer.googleapis.com/dag/run_count\" AND metric.labels.status=\"success\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_RATE",
+                      "crossSeriesReducer": "REDUCE_SUM"
+                    }
+                  }
+                }
+              },
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"composer.googleapis.com/dag/run_count\" AND metric.labels.status=\"failed\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_RATE",
+                      "crossSeriesReducer": "REDUCE_SUM"
+                    }
+                  }
+                }
+              }
+            ],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "DAG runs / 5min",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "height": 4,
+        "width": 6,
+        "widget": {
+          "title": "BigQuery Slot Utilization",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"bigquery.googleapis.com/slot/total_usage\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_MEAN"
+                    }
+                  }
+                }
+              },
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"bigquery.googleapis.com/slot/assigned_units\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_MEAN"
+                    }
+                  }
+                }
+              }
+            ],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "Slot count",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "Vertex AI Training Job Status",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"aiplatform.googleapis.com/job/state\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_COUNT",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": [
+                        "metric.labels.state"
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "Jobs",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "Data Lake Growth by Zone (bytes)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"storage.googleapis.com/storage/total_bytes\" AND resource.labels.bucket_name=starts_with(\"secondwave-raw\")",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_SUM"
+                    }
+                  }
+                }
+              },
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"storage.googleapis.com/storage/total_bytes\" AND resource.labels.bucket_name=starts_with(\"secondwave-curated\")",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_SUM"
+                    }
+                  }
+                }
+              },
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"storage.googleapis.com/storage/total_bytes\" AND resource.labels.bucket_name=starts_with(\"secondwave-consumption\")",
+                    "aggregation": {
+                      "alignmentPeriod": "3600s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_SUM"
+                    }
+                  }
+                }
+              }
+            ],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "Bytes",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "DLP Inspection Results",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"dlp.googleapis.com/job/findings_count\"",
+                    "aggregation": {
+                      "alignmentPeriod": "86400s",
+                      "perSeriesAligner": "ALIGN_SUM",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": [
+                        "metric.labels.info_type"
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "Findings",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "height": 4,
+        "width": 6,
+        "widget": {
+          "title": "Vector Search Query Latency (P50/P95/P99)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"aiplatform.googleapis.com/vector_search/query_latencies\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_PERCENTILE_50",
+                      "crossSeriesReducer": "REDUCE_MEAN"
+                    }
+                  }
+                }
+              },
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"aiplatform.googleapis.com/vector_search/query_latencies\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_PERCENTILE_95",
+                      "crossSeriesReducer": "REDUCE_MEAN"
+                    }
+                  }
+                }
+              },
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"aiplatform.googleapis.com/vector_search/query_latencies\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_PERCENTILE_99",
+                      "crossSeriesReducer": "REDUCE_MEAN"
+                    }
+                  }
+                }
+              }
+            ],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "Latency (ms)",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "height": 3,
+        "width": 12,
+        "widget": {
+          "title": "Resource Cost by Component (Daily)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "apiSource": "DEFAULT_CLOUD_MONITORING",
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"billing.googleapis.com/cost\" AND resource.labels.project_id=\"${project_id}\"",
+                    "aggregation": {
+                      "alignmentPeriod": "86400s",
+                      "perSeriesAligner": "ALIGN_SUM",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": [
+                        "resource.labels.service"
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "Daily cost (USD)",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

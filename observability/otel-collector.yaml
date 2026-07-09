@@ -1,0 +1,126 @@
+# =============================================================================
+# OpenTelemetry Collector Configuration — ML Pipeline Telemetry
+# =============================================================================
+# ARCHITECTURE DECISION: The OpenTelemetry collector is deployed as a sidecar
+# or Cloud Run service that receives OTLP telemetry from Composer DAGs, Vertex
+# AI jobs, and custom ML training code. It exports to:
+#   1. Cloud Monitoring (metrics)
+#   2. Cloud Logging (traces and logs)
+#   3. BigQuery (long-term trace storage for ML model lineage)
+#
+# This configuration uses the contrib distribution which includes the GCP
+# exporter, batch processor, and memory limiter.
+#
+# Data flow:
+#   ML Workload → OTLP → OTel Collector → GCP Exporters → Cloud Monitoring/Logging
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Prometheus receiver for scraping Airflow exporter metrics
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: "airflow-exporter"
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["localhost:9112"]
+
+  # Host metrics for Composer worker nodes
+  hostmetrics:
+    collection_interval: 60s
+    scrapers:
+      cpu: {}
+      memory: {}
+      disk: {}
+      network: {}
+
+processors:
+  # ARCHITECTURE DECISION: Batch processing improves export efficiency.
+  # We batch for 5 seconds or 512 items, whichever comes first.
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+    send_batch_max_size: 1024
+
+  # SECURITY SAFEGUARD: Memory limiter prevents the collector from causing
+  # OOM on Composer worker nodes. Soft limit: 256MB, hard limit: 512MB.
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # ARCHITECTURE DECISION: Attribute enrichment adds GCP resource context
+  # to every span/metric/log. This enables correlation between ML training
+  # jobs and the infrastructure they ran on.
+  resource:
+    attributes:
+      - key: gcp.project_id
+        value: "${GCP_PROJECT}"
+        action: upsert
+      - key: gcp.region
+        value: "europe-west2"
+        action: upsert
+      - key: service.name
+        value: "secondwave-ml-platform"
+        action: upsert
+      - key: deployment.environment
+        value: "${SECONDWAVE_ENV}"
+        action: upsert
+
+  # Filter out health check noise
+  filter:
+    error_mode: ignore
+    metrics:
+      exclude:
+        match_type: regexp
+        metric_names:
+          - "^grpc\\.io.*"
+
+exporters:
+  # Export traces and metrics to Cloud Monitoring
+  googlecloud:
+    project: "${GCP_PROJECT}"
+    user_agent: "secondwave-otel-collector/1.0"
+    metric:
+      prefix: "secondwave"
+
+  # Export logs to Cloud Logging
+  googlecloudlogging:
+    project: "${GCP_PROJECT}"
+    log_name: "secondwave-ml-telemetry"
+
+  # Debug exporter for local development
+  logging:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource, filter]
+      exporters: [googlecloud, logging]
+
+    metrics:
+      receivers: [otlp, prometheus, hostmetrics]
+      processors: [memory_limiter, batch, resource, filter]
+      exporters: [googlecloud, logging]
+
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [googlecloudlogging, logging]
+
+  telemetry:
+    logs:
+      level: "info"
+    metrics:
+      level: "basic"
+      address: ":8888"
