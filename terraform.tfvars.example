@@ -1,0 +1,134 @@
+# =============================================================================
+# Terraform Variables Example — SecondWave ML/AI Platform
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in your values.
+# cp terraform.tfvars.example terraform.tfvars
+
+# --- Project & Environment ---
+project_id = "secondwave-dev"        # GCP project ID
+region     = "europe-west2"          # London — UK data residency
+environment = "dev"                  # dev | staging | prod
+
+# --- BigQuery ---
+# bigquery_datasets — defined in the default, override per environment
+# See variables.tf for the full structure
+
+# --- Cloud Composer ---
+# composer_config = {
+#   environment_size = "ENVIRONMENT_SIZE_SMALL"
+#   scheduler_count  = 1
+#   worker_count     = 3
+#   web_server_count = 1
+#   airflow_version  = "2.9.1"
+#   airflow_config_overrides = {
+#     "core-dags_are_paused_at_creation" = "True"
+#   }
+#   env_variables = {
+#     "SECONDWAVE_ENV" = "dev"
+#     "BQ_DATASET"     = "secondwave_dev"
+#   }
+#   network       = "projects/secondwave-dev/global/networks/vpc-main"
+#   subnetwork    = "projects/secondwave-dev/regions/europe-west2/subnetworks/subnet-composer"
+#   kms_key_name  = "projects/secondwave-dev/locations/europe-west2/keyRings/composer/cryptoKeys/composer-key"
+#   service_account_email = "composer-sa@secondwave-dev.iam.gserviceaccount.com"
+# }
+
+# --- Vertex AI Workbench ---
+# vertex_ai_config = {
+#   ml-engineer = {
+#     name                  = "ml-engineer-wb"
+#     machine_type          = "n1-standard-8"
+#     accelerator_type      = "NVIDIA_TESLA_T4"
+#     accelerator_count     = 1
+#     boot_disk_size_gb     = 100
+#     boot_disk_type        = "PD_SSD"
+#     data_disk_size_gb     = 500
+#     data_disk_type        = "PD_SSD"
+#     network               = "projects/secondwave-dev/global/networks/vpc-main"
+#     subnet                = "projects/secondwave-dev/regions/europe-west2/subnetworks/subnet-vertex"
+#     kms_key_name          = "projects/secondwave-dev/locations/europe-west2/keyRings/vertex/cryptoKeys/notebook-key"
+#     service_account_email = "vertex-sa@secondwave-dev.iam.gserviceaccount.com"
+#     idle_shutdown_minutes = 60
+#   }
+#   data-scientist = {
+#     name                  = "data-scientist-wb"
+#     machine_type          = "n1-standard-4"
+#     accelerator_type      = "NVIDIA_TESLA_T4"
+#     accelerator_count     = 0
+#     boot_disk_size_gb     = 100
+#     boot_disk_type        = "PD_SSD"
+#     data_disk_size_gb     = 200
+#     data_disk_type        = "PD_SSD"
+#     network               = "projects/secondwave-dev/global/networks/vpc-main"
+#     subnet                = "projects/secondwave-dev/regions/europe-west2/subnetworks/subnet-vertex"
+#     kms_key_name          = "projects/secondwave-dev/locations/europe-west2/keyRings/vertex/cryptoKeys/notebook-key"
+#     service_account_email = "vertex-sa@secondwave-dev.iam.gserviceaccount.com"
+#     idle_shutdown_minutes = 120
+#   }
+# }
+
+# --- Data Lake ---
+# See data_lake_config default in variables.tf
+
+# --- DLP ---
+# dlp_config = {
+#   inspection_template_id      = "secondwave-pii-inspect"
+#   deidentify_template_id      = "secondwave-pii-mask"
+#   job_trigger_id              = "secondwave-dlp-trigger"
+#   scan_frequency_minutes      = 1440
+#   inspect_max_findings        = 100
+#   inspection_targets = [
+#     "EMAIL_ADDRESS",
+#     "PHONE_NUMBER",
+#     "US_SSN",
+#     "UK_NATIONAL_INSURANCE_NUMBER",
+#     "CREDIT_CARD_NUMBER",
+#     "DATE_OF_BIRTH",
+#     "PERSON_NAME",
+#     "STREET_ADDRESS",
+#   ]
+# }
+
+# --- VPC-SC ---
+# vpc_sc_config = {
+#   perimeter_name      = "secondwave-ml-perimeter"
+#   perimeter_title     = "SecondWave ML/AI Perimeter"
+#   restricted_services = [
+#     "bigquery.googleapis.com",
+#     "storage.googleapis.com",
+#     "aiplatform.googleapis.com",
+#     "composer.googleapis.com",
+#     "dlp.googleapis.com",
+#   ]
+#   access_level = "accessPolicies/12345678/accessLevels/trusted_employees"
+#   vpc_accessible_services = [
+#     "bigquery.googleapis.com",
+#     "storage.googleapis.com",
+#     "aiplatform.googleapis.com",
+#   ]
+# }
+
+# --- Workload Identity ---
+# workload_identity_config = {
+#   github-actions = {
+#     pool_id               = "github-actions-pool"
+#     provider_id           = "github-actions-provider"
+#     issuer_uri            = "https://token.actions.githubusercontent.com"
+#     allowed_audiences     = ["https://github.com/secondwave"]
+#     attribute_mapping = {
+#       "google.subject"       = "assertion.sub"
+#       "attribute.repository" = "assertion.repository"
+#     }
+#     service_account_email = "github-actions-sa@secondwave-dev.iam.gserviceaccount.com"
+#     attribute_condition   = "assertion.repository == 'secondwave/fraud-detection-platform'"
+#   }
+# }
+
+# --- Labels ---
+# default_labels = {
+#   application  = "secondwave-fraud-detection"
+#   environment  = "dev"
+#   cost-center  = "ml-platform"
+#   managed-by   = "terraform"
+#   data-classification = "pii-sensitive"
+# }

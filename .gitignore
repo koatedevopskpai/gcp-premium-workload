@@ -1,0 +1,87 @@
+# =============================================================================
+# Gitignore — SecondWave ML/AI Platform
+# =============================================================================
+# ARCHITECTURE DECISION: Sensitive files (.tfstate, terraform.tfvars,
+# service account keys) are ignored by default. The .tfvars.example file
+# provides a template without secrets.
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Secret variables (never commit real values)
+terraform.tfvars
+*.auto.tfvars
+!terraform.tfvars.example
+
+# Service account keys (never commit these)
+**/*service-account*.json
+**/*credentials*.json
+**/*key*.json
+
+# Infracost
+.infracost-usage.yml
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Go (tests)
+*.test
+*.out
+tests/vendor/
+
+# Shell scripts (generated temp files)
+/tmp/
+
+# Sentinel (OPA/Conftest)
+.sentinel/
+
+# Pre-commit
+.secrets.baseline
+
+# ASDF
+.tool-versions.backup
+
+# Python virtual environments (for pre-commit, scripts)
+venv/
+.venv/
+*.egg-info/
+
+# Cloud Composer DAGs (synced to GCS, not stored in git)
+dags/
+!dags/.gitkeep
+
+# IDE-specific
+*.sublime-project
+*.sublime-workspace
+*.project
+*.classpath
+.settings/
+
+# Logs
+*.log
+/logs/
+
+# Environment files
+.env
+.envrc
