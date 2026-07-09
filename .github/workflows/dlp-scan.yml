@@ -1,0 +1,104 @@
+# =============================================================================
+# DLP Scan — Trigger Cloud DLP inspection on data lake changes
+# =============================================================================
+# This workflow triggers a DLP scan job when files change in the raw data
+# lake bucket. It's an alternative to the scheduled DLP job trigger for
+# cases where immediate PII detection is needed (e.g., ad-hoc data uploads).
+#
+# ARCHITECTURE DECISION: We provide both scheduled (job trigger in Terraform)
+# and event-driven (this workflow) DLP scanning. The scheduled trigger runs
+# daily for compliance; the event-driven trigger provides near-real-time
+# detection for critical data loads.
+
+name: "DLP Scan — Data Lake PII Inspection"
+
+on:
+  workflow_dispatch:
+    inputs:
+      bucket:
+        description: "GCS bucket to scan"
+        required: true
+        default: "secondwave-raw-dev"
+      scan_limit:
+        description: "Max files to scan"
+        required: false
+        default: "100"
+  # In production, this would be triggered by a Pub/Sub notification:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "data/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  WORKLOAD_IDENTITY_PROVIDER: projects/12345678/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
+  DLP_INSPECT_TEMPLATE: projects/secondwave-dev/locations/europe-west2/inspectTemplates/secondwave-pii-inspect
+  BQ_DATASET: secondwave_dev
+  BQ_TABLE: dlp_findings
+
+jobs:
+  dlp-scan:
+    name: "Inspect GCS Bucket for PII"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Authenticate to GCP"
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: dlp-scanner-sa@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: "Setup gcloud"
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: "List files in target bucket"
+        id: list-files
+        run: |
+          echo "::group::Files found"
+          gsutil ls "gs://${{ github.event.inputs.bucket }}/**" | head -${{ github.event.inputs.scan_limit || '100' }}
+          echo "::endgroup::"
+
+      - name: "Run DLP Inspection Job"
+        run: |
+          JOB_ID="manual-scan-$(date +%Y%m%d-%H%M%S)"
+          gcloud dlp jobs create \
+            --project=${{ vars.GCP_PROJECT_ID }} \
+            --job-id="${JOB_ID}" \
+            --inspect-template=${{ env.DLP_INSPECT_TEMPLATE }} \
+            --storage-config="cloud_storage_options={file_set={url='gs://${{ github.event.inputs.bucket }}/*'}}" \
+            --output-path="gs://secondwave-curated-${{ vars.ENVIRONMENT }}/dlp-results/${JOB_ID}/"
+
+          echo "DLP Job ID: ${JOB_ID}"
+
+      - name: "Monitor DLP Job Completion"
+        run: |
+          JOB_ID="manual-scan-$(date +%Y%m%d-%H%M%S)"
+          echo "Monitoring DLP job ${JOB_ID}..."
+          # Wait for DLP job completion with 5-minute timeout
+          for i in $(seq 1 30); do
+            STATUS=$(gcloud dlp jobs describe "${JOB_ID}" --project=${{ vars.GCP_PROJECT_ID }} --format="value(state)")
+            echo "Status: ${STATUS}"
+            if [ "${STATUS}" = "DONE" ]; then
+              echo "DLP scan completed successfully"
+              break
+            fi
+            if [ "${STATUS}" = "FAILED" ]; then
+              echo "DLP scan failed"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: "Output DLP Findings Summary"
+        run: |
+          echo "::group::DLP Scan Summary"
+          gcloud dlp jobs describe "${JOB_ID}" \
+            --project=${{ vars.GCP_PROJECT_ID }} \
+            --format="json(inspectDetails.result.infoTypeStats)"
+          echo "::endgroup::"

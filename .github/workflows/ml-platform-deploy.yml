@@ -1,0 +1,117 @@
+# =============================================================================
+# ML Platform Deploy — GitHub Actions
+# =============================================================================
+# Deploys ML/AI platform infrastructure using Terraform with OIDC-based
+# authentication (no GCP service account keys stored in GitHub secrets).
+#
+# ARCHITECTURE DECISION: OIDC over static service account keys:
+# - No key rotation overhead
+# - No key leakage risk in secrets
+# - Every deployment is audited to the specific workflow run
+# - Token is short-lived (1 hour max)
+#
+# This workflow is triggered on pushes to main and on PRs (plan only).
+
+name: "ML Platform Deploy"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+      - "modules/**"
+      - ".github/workflows/ml-platform-deploy.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+      - "modules/**"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VERSION: 1.6.6
+  TG_VERSION: none
+  WORKLOAD_IDENTITY_POOL: projects/12345678/locations/global/workloadIdentityPools/github-actions-pool
+  WORKLOAD_IDENTITY_PROVIDER: projects/12345678/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
+
+jobs:
+  terraform:
+    name: "Terraform ${{ github.event_name == 'pull_request' && 'Plan' || 'Apply' }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Authenticate to GCP via Workload Identity Federation"
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: terraform-sa@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: "Terraform Init"
+        run: terraform init -backend-config="bucket=${{ vars.TFSTATE_BUCKET }}" -backend-config="prefix=terraform/state/premium-workload"
+
+      - name: "Terraform Format Check"
+        run: terraform fmt -check -recursive
+
+      - name: "Terraform Validate"
+        run: terraform validate
+
+      - name: "Terraform Plan"
+        id: plan
+        run: terraform plan -out=tfplan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars"
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+
+      - name: "Terraform Plan Output (PR comment)"
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `${{ steps.plan.outputs.stdout }}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan\n\`\`\`\n${output}\n\`\`\``
+            });
+
+      - name: "Terraform Apply"
+        if: github.event_name != 'pull_request'
+        run: terraform apply -auto-approve tfplan
+
+      - name: "Infracost — Cost Estimation"
+        if: github.event_name == 'pull_request'
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: "Terraform Security Scan (Checkov)"
+        if: always()
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          quiet: true
+          soft_fail: true
