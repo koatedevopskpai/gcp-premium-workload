@@ -1,0 +1,53 @@
+# =============================================================================
+# Checkov Configuration — Infrastructure Security Scanning
+# =============================================================================
+# ARCHITECTURE DECISION: Checkov scans Terraform code for security
+# misconfigurations before they reach production. It checks 750+ rules
+# against CIS benchmarks, GDPR, PCI-DSS, and HIPAA frameworks.
+#
+# SECURITY SAFEGUARD: All CKV_GCP_* rules are enforced. The only exceptions
+# are for resources where the risk is accepted and documented.
+
+compact: true
+directory: .
+framework:
+  - terraform
+  - all
+
+skip-path:
+  - .github
+  - scripts
+
+quiet: true
+
+# SECURITY SAFEGUARD: Do NOT skip any CKV_GCP_* rules without documented
+# acceptance from the CISO. All skipped rules must be listed here with a
+# justification.
+skip-check:
+  # CKV_GCP_63: "Ensure Cloud SQL uses CMEK"
+  # Justification: Cloud SQL is not used in this platform (BigQuery is the
+  # data warehouse). If Cloud SQL is added later, this rule must be enforced.
+  - CKV_GCP_63
+
+  # CKV_GCP_29: "Ensure GKE clusters are not using default service account"
+  # Justification: GKE is not used in this platform (Composer manages its
+  # own GKE cluster internally).
+  - CKV_GCP_29
+
+  # CKV_GCP_71: "Ensure Cloud DNS DNSSEC is enabled"
+  # Justification: DNS is managed at the organization level, not in this repo.
+  - CKV_GCP_71
+
+  # CKV2_GCP_12: "Ensure VPC flow logs are enabled"
+  # Justification: VPC resources are not created in this repo — they are
+  # assumed to exist (network IDs are passed as variables). Flow logs must
+  # be enabled at the VPC level by the networking team.
+  - CKV2_GCP_12
+
+soft_fail: false
+
+output:
+  - cli
+  - junitxml
+
+summary-position: "bottom"

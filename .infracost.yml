@@ -1,0 +1,63 @@
+# =============================================================================
+# Infracost Configuration — Terraform Cost Estimation
+# =============================================================================
+# ARCHITECTURE DECISION: Infracost estimates monthly cloud costs for every
+# Terraform change. It runs in CI (see .github/workflows/ml-platform-deploy.yml)
+# and comments the cost diff on PRs.
+
+version: 0.1
+
+projects:
+  - path: .
+    name: premium-workload
+    usage_file: .infracost-usage.yml
+
+  - path: modules/bigquery
+    name: bigquery-module
+    usage_file: .infracost-usage.yml
+
+  - path: modules/data-lake
+    name: data-lake-module
+    usage_file: .infracost-usage.yml
+
+  - path: modules/composer
+    name: composer-module
+    usage_file: .infracost-usage.yml
+
+  - path: modules/vertex-ai
+    name: vertex-ai-module
+    usage_file: .infracost-usage.yml
+
+  - path: modules/vector-search
+    name: vector-search-module
+    usage_file: .infracost-usage.yml
+
+  - path: modules/dlp
+    name: dlp-module
+    usage_file: .infracost-usage.yml
+
+  - path: modules/workload-identity
+    name: workload-identity-module
+
+# ARCHITECTURE DECISION: Currency set to GBP for UK-based contracting.
+# All cost estimates appear in pounds sterling for stakeholder reports.
+currency: GBP
+
+output:
+  - table
+  - html
+  - json
+
+behavior:
+  # SECURITY SAFEGUARD: Show cost breakdown by environment tag
+  breakdown_by:
+    - default_labels.environment
+
+  # ARCHITECTURE DECISION: If cost increases by > 20%, show a warning.
+  # This catches costly misconfigurations (e.g., accidentally enabling
+  # a GPU instance type in dev).
+  warn_on_estimated_costs:
+    percentage: 20
+
+  # SECURITY SAFEGUARD: Show cost of enabled services even if usage is 0
+  include_all_projects: true

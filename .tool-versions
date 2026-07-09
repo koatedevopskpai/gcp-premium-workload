@@ -1,0 +1,23 @@
+# =============================================================================
+# ASDF Tool Versions — SecondWave ML/AI Platform
+# =============================================================================
+# ARCHITECTURE DECISION: ASDF is used as the version manager for all
+# platform tools. This ensures every engineer uses the exact same tool
+# versions, preventing "works on my machine" issues.
+#
+# Install: https://asdf-vm.com/guide/getting-started.html
+# Setup: asdf plugin add terraform && asdf install
+#        asdf plugin add golang && asdf install
+#        asdf plugin add tflint && asdf install
+#        asdf plugin add checkov && asdf install
+
+terraform 1.6.6
+golang    1.22.3
+tflint    0.52.0
+checkov   3.2.100
+pre-commit 3.7.1
+terraform-docs 0.18.0
+infracost  0.10.38
+shellcheck 0.10.0
+opa        0.65.0
+conftest  0.54.0
