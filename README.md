@@ -1,8 +1,8 @@
 # SecondWave ML/AI Platform — Premium GCP Workload
 
-> **Enterprise-grade ML infrastructure for fintech fraud detection under GDPR and PII constraints.**
+> **ML/AI infrastructure reference design for fintech fraud detection under GDPR and PII constraints.**
 >
-> This is a reference architecture for a UK Platform Engineer contractor position targeting £600+/day GCP roles. It demonstrates production-grade Terraform with CMEK encryption, VPC-SC perimeters, column-level BigQuery security, Cloud DLP integration, and Vertex AI ML pipelines — all built for the **SecondWave** fraud detection scenario.
+> This is a reference architecture for a UK Platform Engineer contractor position targeting £600+/day GCP roles. It demonstrates Terraform with CMEK encryption, VPC-SC perimeters, column-level BigQuery security, Cloud DLP integration, and Vertex AI ML pipelines — all built for the **SecondWave** fraud detection scenario.
 
 ---
 
@@ -36,7 +36,7 @@
 | **Financial regulations** (FCA, SEC 17a-4) | Transaction records retained for 7 years with immutable storage |
 | **PCI-DSS** | Credit card data must be masked for non-authorised users |
 | **5-person platform team** | Managed services over self-hosted; no Kubernetes expertise on the team |
-| **£600+/day contractor rate** | Architecture must demonstrate enterprise-grade decisions justifying senior rates |
+| **£600+/day contractor rate** | Architecture must demonstrate the design, security and cost decisions expected of a senior engineer |
 
 ### Data Sources
 
@@ -416,4 +416,4 @@ gcp/premium-workload/
 
 ---
 
-*Built for a UK Platform Engineer contractor portfolio — demonstrating enterprise-grade GCP ML/AI infrastructure with security, compliance, and cost governance built in from day one.*
+*Built for a UK Platform Engineer contractor portfolio — demonstrating GCP ML/AI infrastructure with security, compliance, and cost governance built in from day one.*
